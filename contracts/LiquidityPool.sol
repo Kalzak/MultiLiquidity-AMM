@@ -19,6 +19,14 @@ contract LiquidityPool {
 	mapping(bytes20 => LiquidityPoolData) private lpData;
 
 	/**
+	 * @dev Modifier that only runs function body if liquidity pool exists
+	 */
+	modifier poolExists(lpId) {	
+		require(checkPoolExists(lpId) == true, "Pool non-existent");
+		_;
+	}
+
+	/**
 	 * @dev Creates a liquidity pool between tokenA and tokenB.
 	 * @param tokenA Address of the first ERC20 token
 	 * @param tokenB Adderss of the second ERC20 token
@@ -66,7 +74,7 @@ contract LiquidityPool {
 	 * The user should have approved this contract for tokenA and tokenB to an
 	 * amount equal or greater than aAmt for tokenA and bAmt for tokenB.
 	 */
-	function addToLp(bytes20 lpId, uint256 aAmt) public {
+	function addToLp(bytes20 lpId, uint256 aAmt) public poolExists(lpId) {
 		// Calculate the amount of each token to add to the LP
 		uint256 bAmt = calcTokenBAmount(lpId, aAmt);
 		// Load the lpData struct
@@ -89,7 +97,7 @@ contract LiquidityPool {
 	 * @param lpId The ID for the pool to have its liquidity removed
 	 * @param removeAmount The amount of liquidity to be removed in terms of tokenA
 	 */
-	function removeFromLp(bytes20 lpId, uint256 removeAmount) public {
+	function removeFromLp(bytes20 lpId, uint256 removeAmount) public poolExists(lpId) {
 		// Load the lpData struct
 		LiquidityPoolData storage _lpData = lpData[lpId];
 		// Ensure user is not removing more than they own and amount is nonzero
@@ -169,7 +177,7 @@ contract LiquidityPool {
 	 * @param lpId The ID of the pool being checked
 	 * @return True if pool exists, otherwise false
 	 */
-	function poolExists(bytes20 lpId) public view returns (bool) {
+	function checkPoolExists(bytes20 lpId) public view returns (bool) {
 		if(lpData[lpId].constantProduct == 0) {
 			return false;
 		}
