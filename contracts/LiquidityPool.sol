@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract LiquidityPools {
+contract LiquidityPool {
 	// Struct to store data about a liquidity pool pair
 	struct LiquidityPoolData {
 		address tokenA;
@@ -40,11 +40,11 @@ contract LiquidityPools {
 		bytes20 lpId = calcLpId(tokenA, tokenB);
 		// Check if a pool already exists
 		require(lpData[lpId].constantProduct == 0, "Already exists");
+		// Check that aAmt and bAmt are above zero
+		require(aAmt > 0 && bAmt > 0, "aAmt or bAmt is zero");
 		// Transfer tokens to this contract
-		bool aRes = IERC20(tokenA).transferFrom(msg.sender, address(this), aAmt);
-		bool bRes = IERC20(tokenB).transferFrom(msg.sender, address(this), bAmt);
-		// If either of the transfers failed then revert
-		require(aRes && bRes, "Transfer failed");
+		IERC20(tokenA).transferFrom(msg.sender, address(this), aAmt);
+		IERC20(tokenB).transferFrom(msg.sender, address(this), bAmt);
 		// Fill data into the struct containing information on the new pool
 		LiquidityPoolData storage _lpData = lpData[lpId];
 		_lpData.tokenA = tokenA;
