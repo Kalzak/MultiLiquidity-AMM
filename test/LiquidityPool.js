@@ -79,8 +79,81 @@ describe("LiquidityPool contract", function() {
 				liquidityPool.createLp(token1.address, token2.address, ownerBalT1, ownerBalT2)
 			).to.be.revertedWith("Already exists");
 		});
+	});
 
+	describe("addToLp", function() {
+		it("Cannot add LP to a non-existent pool", async function() {
+			// Find an lpId of a pair that does not exist
+			let lpId = await liquidityPool.calcLpId(token1.address, token2.address);
+			// Attempt to add to the pool
+			expect(
+				liquidityPool.addToLp(lpId, '0')
+			).to.be.revertedWith("Pool non-existent");
+		});
 
+		it("Adding liquidity updates the lpData struct", async function() {
+			// Approve spend of token for owner
+			let ownerBalT1 = await approveSpend(token1, owner, liquidityPool, -1);
+			let ownerBalT2 = await approveSpend(token2, owner, liquidityPool, -1);
+			// Create pool
+			await liquidityPool.createLp(token1.address, token2.address, ownerBalT1, ownerBalT2);
+			// Calculate the lpId of token1 and token2
+			let lpId = await liquidityPool.calcLpId(token1.address, token2.address);
+			// Approve spend of token for addr1
+			let addr1BalT1 = await approveSpend(token1, addr1, liquidityPool, -1);
+			let addr1BalT2 = await approveSpend(token2, addr1, liquidityPool, -1);
+			// Get how much of each token needs to be provided
+			let tokenRatio = await liquidityPool.calcTokenBAmount(lpId, addr1BalT1);
+			// Add liquidity
+			await liquidityPool.connect(addr1).addToLp(lpId, addr1BalT1.toString());
+			// Check the struct data
+			let [t1addr, t2addr, t1amt, t2amt, conProd] = await liquidityPool.getLpData(lpId);
+			expect(t1addr).to.exist;
+			expect(t2addr).to.exist;
+			expect(t1amt).to.equal(100000n * 10n ** 18n);
+			expect(t2amt).to.equal(100000n * 10n ** 18n);
+			expect(conProd).to.equal((100000n * 10n ** 18n) ** 2n);
+		});
+
+		it("Account cannot add more liquidity than they own", async function() {
+			// Approve spend of token for owner
+			let ownerBalT1 = await approveSpend(token1, owner, liquidityPool, -1);
+			let ownerBalT2 = await approveSpend(token2, owner, liquidityPool, -1);
+			// Create pool with size larger than balance
+			expect( 
+				liquidityPool.createLp(token1.address, token2.address, BigInt(ownerBalT1) * 2n, BigInt(ownerBalT2) * 2n)
+			).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+		});
+	});
+
+	describe("removeFromLp", function() {
+		it("Partial liquidity can be removed", async function() {
+			// Approve spend of token for owner
+			let ownerBalT1 = await approveSpend(token1, owner, liquidityPool, -1);
+			let ownerBalT2 = await approveSpend(token2, owner, liquidityPool, -1);
+			// Create pool
+			await liquidityPool.createLp(token1.address, token2.address, ownerBalT1, ownerBalT2);
+			// Calculate the lpId of token1 and token2
+			let lpId = await liquidityPool.calcLpId(token1.address, token2.address);
+			// Remove half the liquidity
+			await liquidityPool.removeFromLp(lpId, (ownerBalT1.div(2)));
+			let newOwnerBalT1 = await token1.balanceOf(owner.address);
+			expect(newOwnerBalT1.mul(2)).to.equal(ownerBalT1)
+		});	
+
+		it("All liquidity can be removed", async function() {
+			// Approve spend of token for owner
+			let ownerBalT1 = await approveSpend(token1, owner, liquidityPool, -1);
+			let ownerBalT2 = await approveSpend(token2, owner, liquidityPool, -1);
+			// Create pool
+			await liquidityPool.createLp(token1.address, token2.address, ownerBalT1, ownerBalT2);
+			// Calculate the lpId of token1 and token2
+			let lpId = await liquidityPool.calcLpId(token1.address, token2.address);
+			// Remove half the liquidity
+			await liquidityPool.removeFromLp(lpId, ownerBalT1);
+			let newOwnerBalT1 = await token1.balanceOf(owner.address);
+			expect(newOwnerBalT1).to.equal(ownerBalT1)
+		});	
 	});
 });
 
