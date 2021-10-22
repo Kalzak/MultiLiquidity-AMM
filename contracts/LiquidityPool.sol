@@ -21,7 +21,7 @@ contract LiquidityPool {
 	/**
 	 * @dev Modifier that only runs function body if liquidity pool exists
 	 */
-	modifier poolExists(lpId) {	
+	modifier poolExists(bytes20 lpId) {	
 		require(checkPoolExists(lpId) == true, "Pool non-existent");
 		_;
 	}
@@ -50,9 +50,6 @@ contract LiquidityPool {
 		require(lpData[lpId].constantProduct == 0, "Already exists");
 		// Check that aAmt and bAmt are above zero
 		require(aAmt > 0 && bAmt > 0, "aAmt or bAmt is zero");
-		// Transfer tokens to this contract
-		IERC20(tokenA).transferFrom(msg.sender, address(this), aAmt);
-		IERC20(tokenB).transferFrom(msg.sender, address(this), bAmt);
 		// Fill data into the struct containing information on the new pool
 		LiquidityPoolData storage _lpData = lpData[lpId];
 		_lpData.tokenA = tokenA;
@@ -61,6 +58,9 @@ contract LiquidityPool {
 		_lpData.tokenBAmt = bAmt;
 		_lpData.constantProduct = aAmt * bAmt;
 		_lpData.providerAmount[msg.sender] = aAmt;
+		// Transfer tokens to this contract
+		IERC20(tokenA).transferFrom(msg.sender, address(this), aAmt);
+		IERC20(tokenB).transferFrom(msg.sender, address(this), bAmt);
 	}
 
 	/**
@@ -87,6 +87,8 @@ contract LiquidityPool {
 		_lpData.tokenBAmt += bAmt;
 		// Store the amount that the user has contributed to the pool
 		_lpData.providerAmount[msg.sender] += aAmt;
+		// Update the constant product given the new token amounts
+		_lpData.constantProduct = _lpData.tokenAAmt * _lpData.tokenBAmt;
 		// Transfer the tokens to the contract
 		IERC20(tokenA).transferFrom(msg.sender, address(this), aAmt);
 		IERC20(tokenB).transferFrom(msg.sender, address(this), bAmt);
@@ -170,6 +172,22 @@ contract LiquidityPool {
 		address addr2
 	) public pure returns (bytes20) {
 		return bytes20(addr1) ^ bytes20(addr2);
+	}
+
+	/**
+	 * @dev Returns data for a given lpId
+	 */
+	function getLpData(
+		bytes20 lpId
+	) public view returns (address, address, uint256, uint256, uint256) {
+		LiquidityPoolData storage _lpData = lpData[lpId];
+		return (
+			_lpData.tokenA,
+			_lpData.tokenB,
+			_lpData.tokenAAmt,
+			_lpData.tokenBAmt,
+			_lpData.constantProduct
+		);	
 	}
 
 	/**
