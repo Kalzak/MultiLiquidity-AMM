@@ -16,7 +16,7 @@ contract LiquidityPool {
 	}
 	
 	// Mapping from a unqiue liquidity pool pair ID to the pair data
-	mapping(bytes20 => LiquidityPoolData) private lpData;
+	mapping(bytes20 => LiquidityPoolData) lpData;
 
 	/**
 	 * @dev Modifier that only runs function body if liquidity pool exists
