@@ -12,7 +12,7 @@ describe("LiquidityPool contract", function() {
 	let addr1;
 	let addr2;
 	// Misc useful variables
-	const amountToMint = 50000n * 10n ** 18n
+	const amountToMint = 50000n * 10n ** 18n;
 	
 	before(async function() {
 		// Deploy the liquidity pool contract
